@@ -226,7 +226,6 @@ with st.sidebar:
     
     if modo_simulador:
         st.success("Modo Simulador Activo")
-        # Forzar simulado a Abril de 2027
         fecha_corte_obj = datetime(2027, 4, 15)
         df_avance['Pct_Avance_Fisico'] = [0.85, 0.45, 0.60, 0.35][:len(df_avance)]
         df_avance['Pct_Avance_Financiero'] = [0.80, 0.50, 0.55, 0.30][:len(df_avance)]
@@ -242,8 +241,28 @@ with st.sidebar:
     st.divider()
     st.info(f"**Proyecto:** CASA JG\n\n**Ubicación:** Santa Cruz, Bolivia\n\n**Fecha Corte:** {fecha_corte_obj.strftime('%d/%m/%Y')}")
 
+    # ==========================================
+    # 5. DYNAMIC QR CODE FOR SHARING
+    # ==========================================
+    st.divider()
+    st.subheader("📲 Compartir con Cliente")
+    url_dashboard = st.text_input(
+        "Enlace de tu App Deplomada:", 
+        value="https://casajg-jumbo-ia.streamlit.app"
+    )
+    if url_dashboard:
+        # Generación de QR dinámico usando un servicio gratuito seguro
+        qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=FF8C00&bgcolor=1E1E1E&data={url_dashboard}"
+        st.markdown(f"""
+            <div style="text-align: center; background-color: #1E1E1E; padding: 12px; border-radius: 8px; border: 1px solid #FF8C00; margin-top: 5px;">
+                <p style="font-size: 11px; color: #FFFFFF; margin-bottom: 8px;"><b>CÓDIGO QR DE ACCESO</b></p>
+                <img src="{qr_api_url}" style="width: 120px; height: 120px; border-radius: 4px; margin-bottom: 8px;">
+                <p style="font-size: 10px; color: #CCCCCC; margin-bottom: 0px; line-height: 1.2;">Escanea con tu celular para compartir la visualización</p>
+            </div>
+        """, unsafe_allow_html=True)
+
 # ==========================================
-# 5. INICIALIZACIÓN DE BASES DE DATOS DE SESIÓN
+# 6. INICIALIZACIÓN DE BASES DE DATOS DE SESIÓN
 # ==========================================
 if "db_fotos" not in st.session_state:
     st.session_state.db_fotos = [
@@ -282,8 +301,18 @@ if "db_reportes" not in st.session_state:
         {"numero": "REP-001", "fecha": "2026-05-30", "periodo": "01/05/2026 al 30/05/2026", "archivo": "Informe_Fiscalizacion_Mayo.pdf", "tipo": "Oficial"}
     ]
 
+if "db_proveedores" not in st.session_state:
+    st.session_state.db_proveedores = [
+        {"proveedor": "SOBOCE S.A. (Hormigón Listo)", "rubro": "Hormigón Premezclado H21 / H25", "contacto": "Ing. Carlos Vaca (760-14352)", "estado": "Suministro Activo", "monto_bs": 145250.00},
+        {"proveedor": "Aceros LAS LOMAS", "rubro": "Acero Estructural de Refuerzo AH500", "contacto": "Lic. Mariana Soruco (773-82910)", "estado": "Suministro Activo", "monto_bs": 98700.00},
+        {"proveedor": "TIGRE PLASMAR S.A.", "rubro": "Sistemas de Conducción PVC Hidro-Sanitaria", "contacto": "Dpto. Comercial (3-3467812)", "estado": "Planilla de Entrega Pendiente", "monto_bs": 35400.00},
+        {"proveedor": "Distribuidora EL ALFARERO", "rubro": "Mampostería, Ladrillo Adobito y Cemento", "contacto": "Ventas Planta Urubó (700-11223)", "estado": "En Negociación (Obra Fina)", "monto_bs": 0.00},
+        {"proveedor": "Hormigones JUMBO S.R.L.", "rubro": "Dirección, Logística y Maquinaria Pesada", "contacto": "Gerencia Técnico (776-94989)", "estado": "Fiscalización Activa", "monto_bs": 443018.72},
+        {"proveedor": "INSTALACIONES ELECTROMECÁNICAS S&R", "rubro": "Conductores de Cobre y Tableros Eléctricos", "contacto": "Ing. Ricardo Rojas (708-54321)", "estado": "Programado (Fase Instalaciones)", "monto_bs": 0.00}
+    ]
+
 # ==========================================
-# 6. CÁLCULOS FINANCIEROS GLOBALES
+# 7. CÁLCULOS FINANCIEROS GLOBALES
 # ==========================================
 AREA_TOTAL_M2 = 575.0
 PORCENTAJE_LOGISTICA = 0.15
@@ -305,17 +334,15 @@ avance_fisico_global = (df_avance['Pct_Avance_Fisico'] * df_avance['Peso_Relativ
 avance_financiero_global = (df_avance['Pct_Avance_Financiero'] * df_avance['Peso_Relativo']).sum() * 100
 
 # ==========================================
-# 7. MAQUETACIÓN MULTIPESTAÑA
+# 8. MAQUETACIÓN MULTIPESTAÑA
 # ==========================================
 tab_control, tab_planillas, tab_galeria, tab_proveedores, tab_camaras, tab_informes = st.tabs([
     "📊 Control Financiero",
-    "🧾 Planillas MO",
+    "🧾 PLANILLAS MO",
     "📸 Galería de Avance",
     "📞 Directorio de Proveedores",
-    "📹 Monitoreo IP en Obra",    
-    "📋 Informes y Reportes"
-    
-    
+    "📹 Monitoreo IP en Obra",
+    "📋 INFORMES Y REPORTES"
 ])
 
 # -----------------------------------------------------------------------------
@@ -514,7 +541,7 @@ with tab_control:
         st.error(f"Falla al cargar Gráfico de Gantt: {e}")
 
 # -----------------------------------------------------------------------------
-# TAB 2: PLANILLAS MO
+# TAB 2: PLANILLAS MO (CON SISTEMA DE BORRADO)
 # -----------------------------------------------------------------------------
 with tab_planillas:
     st.subheader("🧾 Control y Gestión de Planillas de Mano de Obra")
@@ -559,7 +586,7 @@ with tab_planillas:
     if not planillas_sorted:
         st.info("No se han registrado planillas de mano de obra aún.")
     else:
-        for p in planillas_sorted:
+        for idx, p in enumerate(planillas_sorted):
             col_pl1, col_pl2 = st.columns([1, 2])
             badge_color = "background-color: #10B981; color: white;" if p["estado"] == "Pagada" else "background-color: #EF4444; color: white;"
             
@@ -568,6 +595,15 @@ with tab_planillas:
                 st.markdown(f"📅 **Fecha de Registro:** {p['fecha']}")
                 st.markdown(f"💰 **Monto Liquidado:** {p['monto_bs']:,.2f} Bs.")
                 st.markdown(f"📌 **Estado:** <span style='padding: 3px 8px; border-radius: 4px; font-weight: bold; {badge_color}'>{p['estado']}</span>", unsafe_allow_html=True)
+                
+                # FUNCIÓN DE ELIMINACIÓN DE PLANILLAS (PREGUNTA 1)
+                if es_admin:
+                    st.write("")
+                    if st.button(f"🗑️ Eliminar Planilla {p['numero']}", key=f"del_planilla_{p['numero']}_{idx}", use_container_width=True):
+                        # Remover la planilla del estado de sesión
+                        st.session_state.db_planillas = [item for item in st.session_state.db_planillas if item["numero"] != p["numero"]]
+                        st.success(f"Planilla {p['numero']} eliminada correctamente.")
+                        st.rerun()
             with col_pl2:
                 st.markdown("**Descripción de Avance:**")
                 st.write(p["descripcion"])
@@ -575,7 +611,7 @@ with tab_planillas:
             st.markdown("<hr style='border-top: 1px dashed #444;'>", unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# TAB 3: GALERÍA FOTOGRÁFICA INTERACTIVA
+# TAB 3: GALERÍA FOTOGRÁFICA (CON AMPLIACIÓN Y BORRADO)
 # -----------------------------------------------------------------------------
 with tab_galeria:
     st.subheader("📸 Galería de Inspección Visual de Avance")
@@ -620,12 +656,19 @@ with tab_galeria:
                         st.error("Todos los campos y archivos son obligatorios.")
         st.divider()
 
-    # Controles de Filtros
-    col_fil1, col_fil2 = st.columns(2)
+    # CONTROLES DE AMPLIACIÓN Y FILTROS (PREGUNTA 2)
+    col_fil1, col_fil2, col_zoom = st.columns([1.2, 1.2, 1.6])
     with col_fil1:
         filtro_f = st.selectbox("Filtrar por Frente de Obra:", ["Todos", "Obra Gruesa", "Obra Fina", "Instalaciones"])
     with col_fil2:
         filtro_o = st.selectbox("Ordenar por fecha de captura:", ["Más recientes primero", "Más antiguas primero"])
+    with col_zoom:
+        # Control dinámico para el tamaño y visualización ampliada
+        modo_vista_fotos = st.radio(
+            "Visualización de fotos (Lupa):",
+            ["Mosaico Estándar (2 Columnas)", "Detallado Ampliado (1 Columna Grande)"],
+            horizontal=True
+        )
 
     fotos_filtradas = st.session_state.db_fotos
     if filtro_f != "Todos":
@@ -637,79 +680,112 @@ with tab_galeria:
     if not fotos_filtradas:
         st.info("No hay registros en esta sección de la galería.")
     else:
-        col_grid1, col_grid2 = st.columns(2)
+        # Configuración dinámica del Grid basado en la selección del usuario
+        if modo_vista_fotos == "Detallado Ampliado (1 Columna Grande)":
+            col_grid = st.columns(1)
+            img_height_css = "auto"  # Permite que la imagen se expanda al máximo sin distorsión
+        else:
+            col_grid = st.columns(2)
+            img_height_css = "260px"
+
         for idx, foto in enumerate(fotos_filtradas):
-            target_col = col_grid1 if idx % 2 == 0 else col_grid2
+            target_col = col_grid[0] if len(col_grid) == 1 else col_grid[idx % 2]
             with target_col:
+                # El tag de imagen HTML utiliza un estilo fluido
                 st.markdown(f"""
                     <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; border-bottom: 3px solid #FF8C00; margin-bottom: 25px; box-shadow: 2px 2px 8px rgba(0,0,0,0.4);">
-                        <img src="{foto['url']}" style="width: 100%; border-radius: 6px; height: 260px; object-fit: cover; margin-bottom: 12px;">
+                        <img src="{foto['url']}" style="width: 100%; border-radius: 6px; height: {img_height_css}; object-fit: cover; margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <span style="background-color: #2D3748; color: #FF8C00; font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: bold; text-transform: uppercase;">{foto['frente']}</span>
                             <span style="color: #A0A0A0; font-size: 12px; font-weight: bold;">📅 {foto['fecha']}</span>
                         </div>
                         <h4 style="color: #FFFFFF; margin-top: 5px; margin-bottom: 6px; font-size: 17px; font-weight: bold;">{foto['titulo']}</h4>
-                        <p style="color: #CCCCCC; font-size: 13px; line-height: 1.45; margin-bottom: 0px;">{foto['descripcion']}</p>
+                        <p style="color: #CCCCCC; font-size: 13px; line-height: 1.45; margin-bottom: 10px;">{foto['descripcion']}</p>
                     </div>
                 """, unsafe_allow_html=True)
+                
+                # FUNCIÓN DE ELIMINACIÓN DE FOTOS (PREGUNTA 3)
+                if es_admin:
+                    if st.button(f"🗑️ Eliminar Imagen: {foto['titulo']}", key=f"del_foto_{foto['fecha']}_{idx}"):
+                        # Remover la foto usando su índice original en db_fotos
+                        original_idx = st.session_state.db_fotos.index(foto)
+                        st.session_state.db_fotos.pop(original_idx)
+                        st.success("Fotografía removida del registro técnico con éxito.")
+                        st.rerun()
 
 # -----------------------------------------------------------------------------
-# TAB 4: DIRECTORIO DE PROVEEDORES
+# TAB 4: DIRECTORIO DE PROVEEDORES (ADMINISTRABLE)
 # -----------------------------------------------------------------------------
 with tab_proveedores:
     st.subheader("📞 Directorio de Proveedores y Estado de Cuentas")
     st.markdown("Lista consolidada de subcontratistas y proveedores del proyecto, con control de saldos y montos ejecutados.")
     st.divider()
 
-    df_prov_data = pd.DataFrame({
-        "Proveedor / Contratista": [
-            "SOBOCE S.A. (Hormigón Listo)", 
-            "Aceros LAS LOMAS", 
-            "TIGRE PLASMAR S.A.", 
-            "Distribuidora EL ALFARERO", 
-            "Hormigones JUMBO S.R.L.",
-            "INSTALACIONES ELECTROMECÁNICAS S&R"
-        ],
-        "Rubro de Suministro": [
-            "Hormigón Premezclado H21 / H25", 
-            "Acero Estructural de Refuerzo AH500", 
-            "Sistemas de Conducción PVC Hidro-Sanitaria", 
-            "Mampostería, Ladrillo Adobito y Cemento", 
-            "Dirección, Logística y Maquinaria Pesada",
-            "Conductores de Cobre y Tableros Eléctricos"
-        ],
-        "Contacto de Atención": [
-            "Ing. Carlos Vaca (760-14352)", 
-            "Lic. Mariana Soruco (773-82910)", 
-            "Dpto. Comercial (3-3467812)", 
-            "Ventas Planta Urubó (700-11223)", 
-            "Gerencia Técnico (776-94989)",
-            "Ing. Ricardo Rojas (708-54321)"
-        ],
-        "Estado del Contrato": [
-            "Suministro Activo", 
-            "Suministro Activo", 
-            "Planilla de Entrega Pendiente", 
-            "En Negociación (Obra Fina)", 
-            "Fiscalización Activa",
-            "Programado (Fase Instalaciones)"
-        ],
-        "Monto Pagado (Bs.)": [
-            145250.00, 
-            98700.00, 
-            35400.00, 
-            0.00, 
-            443018.72, 
-            0.00
-        ]
-    })
+    # SISTEMA DE ADMINISTRACIÓN DE PROVEEDORES (PREGUNTA 4)
+    if es_admin:
+        st.markdown("### ⚙️ Gestión de Proveedores (Exclusivo Administrador)")
+        with st.expander("➕ Registrar / Modificar Proveedor o Contratista", expanded=False):
+            with st.form("form_nuevo_proveedor", clear_on_submit=True):
+                col_prov1, col_prov2 = st.columns(2)
+                with col_prov1:
+                    prov_nombre = st.text_input("Proveedor / Contratista:", placeholder="Nombre de la Empresa")
+                    prov_rubro = st.text_input("Rubro de Suministro:", placeholder="Ej: Aceros, Hormigón, etc.")
+                    prov_contacto = st.text_input("Contacto de Atención:", placeholder="Nombre y celular")
+                with col_prov2:
+                    prov_monto = st.number_input("Monto Pagado Acumulado (Bs.):", min_value=0.0, step=500.0)
+                    prov_estado = st.selectbox(
+                        "Estado del Contrato:",
+                        ["Suministro Activo", "Planilla de Entrega Pendiente", "En Negociación (Obra Fina)", "Fiscalización Activa", "Programado (Fase Instalaciones)"]
+                    )
+                btn_prov = st.form_submit_button("Guardar Proveedor")
+                
+                if btn_prov:
+                    if prov_nombre and prov_rubro:
+                        # Si ya existe, lo actualizamos, de lo contrario lo agregamos
+                        existe = False
+                        for idx, p in enumerate(st.session_state.db_proveedores):
+                            if p["proveedor"].lower().strip() == prov_nombre.lower().strip():
+                                st.session_state.db_proveedores[idx] = {
+                                    "proveedor": prov_nombre,
+                                    "rubro": prov_rubro,
+                                    "contacto": prov_contacto,
+                                    "estado": prov_estado,
+                                    "monto_bs": prov_monto
+                                }
+                                existe = True
+                                break
+                        if not existe:
+                            st.session_state.db_proveedores.append({
+                                "proveedor": prov_nombre,
+                                "rubro": prov_rubro,
+                                "contacto": prov_contacto,
+                                "estado": prov_estado,
+                                "monto_bs": prov_monto
+                            })
+                        st.success(f"Registro de {prov_nombre} guardado correctamente.")
+                        st.rerun()
+                    else:
+                        st.error("El nombre de la empresa y el rubro de suministro son obligatorios.")
+
+        # Opción de borrado de proveedores
+        with st.expander("🗑️ Dar de Baja a un Proveedor", expanded=False):
+            lista_prov_nombres = [p["proveedor"] for p in st.session_state.db_proveedores]
+            prov_seleccionado_del = st.selectbox("Seleccione el proveedor a dar de baja:", lista_prov_nombres)
+            if st.button("Confirmar Baja Definitiva", use_container_width=True):
+                st.session_state.db_proveedores = [p for p in st.session_state.db_proveedores if p["proveedor"] != prov_seleccionado_del]
+                st.success(f"El proveedor {prov_seleccionado_del} ha sido removido del directorio.")
+                st.rerun()
+        st.divider()
+
+    # Convertir base de datos a DataFrame para su visualización interactiva
+    df_prov_data = pd.DataFrame(st.session_state.db_proveedores)
     
     st.dataframe(
         df_prov_data, 
         use_container_width=True, 
         hide_index=True,
         column_config={
-            "Monto Pagado (Bs.)": st.column_config.NumberColumn(
+            "monto_bs": st.column_config.NumberColumn(
                 "Monto Pagado (Bs.)",
                 format="Bs. %,.2f",
                 help="Total de fondos liquidados acumulados en Bolivianos"
@@ -798,7 +874,6 @@ def renderizar_archivo_reportes():
             with col_r2:
                 st.markdown(f"**Período:** {r['periodo']}\n\n<span style='color:#A0A0A0; font-size:0.85rem;'>Archivo: {r['archivo']}</span>", unsafe_allow_html=True)
             with col_r3:
-                # Botón de descarga real con buffer simulado de PDF
                 st.download_button(
                     label="📥 Descargar PDF",
                     data=f"Archivo PDF Simulado del Reporte {r['numero']}\nEmitido el {r['fecha']}.",
