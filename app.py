@@ -334,132 +334,7 @@ costo_total_obra_bs = costo_directo_bs + costo_logistica_bs
 
 costo_total_obra_usd = costo_total_obra_bs / tipo_cambio
 costo_m2_usd = costo_total_obra_usd / AREA_TOTAL_M2
-# --- SECCIÓN 2: CONTROL DE COSTOS DIRECTOS CON DRILL-DOWN POR ÍTEM ---
-    try:
-        st.subheader("2. Desviación de Costos Directos y Desglose por Ítem")
 
-        # Garantizar cálculo de Gasto Real Total por ítem
-        if 'Gasto_Real_Total_Bs' not in df_item.columns:
-            df_item['Gasto_Real_Total_Bs'] = df_item['Real_Mat_Eq_Bs'].fillna(0) + df_item['Real_Mano_Obra_Bs'].fillna(0)
-
-        # Mapa de nombres de módulos
-        mapa_nombres = dict(zip(df_avance['ID_Modulo'], df_avance['Nombre_Modulo']))
-        df_item['Nombre_Modulo'] = df_item['ID_Modulo'].map(mapa_nombres).fillna(df_item['ID_Modulo'])
-
-        # Estado de sesión para módulo seleccionado
-        if "modulo_seleccionado" not in st.session_state:
-            st.session_state["modulo_seleccionado"] = df_avance['Nombre_Modulo'].iloc[0] if not df_avance.empty else "Obra Gruesa"
-
-        # Agrupación por Módulo
-        df_mod_summary = df_item.groupby(['ID_Modulo', 'Nombre_Modulo'], as_index=False).agg({
-            'Pres_Material_Equipos_Bs': 'sum',
-            'Real_Mat_Eq_Bs': 'sum',
-            'Pres_Mano_Obra_Bs': 'sum',
-            'Real_Mano_Obra_Bs': 'sum',
-            'Gasto_Real_Total_Bs': 'sum'
-        })
-
-        # Gráfico interactivo por Módulo (Barras horizontales)
-        fig_modulos = px.bar(
-            df_mod_summary,
-            x='Gasto_Real_Total_Bs',
-            y='Nombre_Modulo',
-            orientation='h',
-            title="Desembolso Real por Módulo (Haz clic en una barra para filtrar)",
-            labels={'Gasto_Real_Total_Bs': 'Gasto Real (Bs)', 'Nombre_Modulo': 'Módulo'},
-            color='Gasto_Real_Total_Bs',
-            color_continuous_scale='Oranges',
-            text=df_mod_summary['Gasto_Real_Total_Bs'].apply(lambda x: f"Bs. {x:,.0f}")
-        )
-
-        fig_modulos.update_traces(textposition='outside', cliponaxis=False)
-        fig_modulos.update_layout(
-            clickmode='event+select',
-            xaxis_title="Desembolso Real (Bs)",
-            yaxis_title="",
-            height=300,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=20, r=60, t=40, b=20)
-        )
-
-        # Renderizado de gráfico interactivo con captura de eventos de selección
-        evento_modulo = st.plotly_chart(
-            fig_modulos,
-            use_container_width=True,
-            on_select="rerun",
-            key="grafico_modulos_click"
-        )
-
-        # Captura de clic en la barra
-        if evento_modulo and "selection" in evento_modulo and evento_modulo["selection"]["point_indices"]:
-            idx_p = evento_modulo["selection"]["point_indices"][0]
-            st.session_state["modulo_seleccionado"] = df_mod_summary.iloc[idx_p]['Nombre_Modulo']
-
-        # Selector manual alternativo
-        modulos_unicos = list(df_mod_summary['Nombre_Modulo'].unique())
-        idx_defecto = modulos_unicos.index(st.session_state["modulo_seleccionado"]) if st.session_state["modulo_seleccionado"] in modulos_unicos else 0
-        
-        mod_elegido = st.selectbox(
-            "📍 Módulo Inspeccionado en Detalle:",
-            options=modulos_unicos,
-            index=idx_defecto,
-            key="sb_modulo_inspector"
-        )
-        st.session_state["modulo_seleccionado"] = mod_elegido
-
-        # --- GRÁFICO DRILL-DOWN POR ÍTEM (ORDENADO DE MAYOR A MENOR GASTO) ---
-        st.markdown(f"#### 📋 Concentración de Gasto Real por Ítem — Módulo: **{st.session_state['modulo_seleccionado']}**")
-
-        col_item_desc = "Descripcion_Item" if "Descripcion_Item" in df_item.columns else "Descripcion" if "Descripcion" in df_item.columns else "ID_Item"
-
-        df_items_filtrados = df_item[
-            df_item['Nombre_Modulo'] == st.session_state["modulo_seleccionado"]
-        ].copy()
-
-        if not df_items_filtrados.empty:
-            # Ordenamiento estricto de mayor a menor desembolso
-            df_items_filtrados = df_items_filtrados.sort_values(by='Gasto_Real_Total_Bs', ascending=True)
-
-            fig_items = px.bar(
-                df_items_filtrados,
-                x='Gasto_Real_Total_Bs',
-                y=col_item_desc,
-                orientation='h',
-                title=f"Ítems de Mayor Impacto Económico en {st.session_state['modulo_seleccionado']}",
-                labels={'Gasto_Real_Total_Bs': 'Gasto Real (Bs)', col_item_desc: 'Ítem de Obra'},
-                color='Gasto_Real_Total_Bs',
-                color_continuous_scale='YlOrRd',
-                text=df_items_filtrados['Gasto_Real_Total_Bs'].apply(lambda x: f"Bs. {x:,.2f}")
-            )
-
-            fig_items.update_traces(
-                textposition='outside',
-                cliponaxis=False,
-                hovertemplate="<b>%{y}</b><br>Gasto Real: Bs. %{x:,.2f}<extra></extra>"
-            )
-
-            fig_items.update_layout(
-                xaxis_title="Desembolso Real (Bs)",
-                yaxis_title="",
-                height=max(350, len(df_items_filtrados) * 40),
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                margin=dict(l=20, r=100, t=40, b=20)
-            )
-
-            st.plotly_chart(fig_items, use_container_width=True)
-
-            # Planilla interactiva de respaldo
-            with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
-                cols_mostrar = [c for c in ['ID_Item', col_item_desc, 'Pres_Material_Equipos_Bs', 'Real_Mat_Eq_Bs', 'Pres_Mano_Obra_Bs', 'Real_Mano_Obra_Bs', 'Gasto_Real_Total_Bs'] if c in df_items_filtrados.columns]
-                df_tabla = df_items_filtrados[cols_mostrar].sort_values(by='Gasto_Real_Total_Bs', ascending=False)
-                st.dataframe(df_tabla, use_container_width=True, hide_index=True)
-        else:
-            st.info("No se registraron ítems ejecutados para el módulo seleccionado.")
-
-    except Exception as e:
-        st.error(f"Falla en la generación del gráfico con interacción drill-down: {e}")
             <p style="font-size: 12px; color: #999999; margin-top: 0px;">
                 PROPIETARIOS: <b>JUAN PABLO ANTONIO JAUREGUI PAZ - GINA MOLINA DE JAUREGUI</b>
             </p>
@@ -564,42 +439,131 @@ costo_m2_usd = costo_total_obra_usd / AREA_TOTAL_M2
 
     st.divider()
 
-    # --- SECCIÓN 2: CONTROL DE COSTOS DIRECTOS (MATERIALES Y MANO DE OBRA) ---
-    try:
-        st.subheader("2. Desviación de Costos Directos: Materiales y Mano de Obra")
-        col_mat, col_mo = st.columns(2)
+   # --- SECCIÓN 2: CONTROL DE COSTOS DIRECTOS CON DRILL-DOWN POR ÍTEM ---
+        try:
+            st.subheader("2. Desviación de Costos Directos y Desglose por Ítem")
 
-        df_agrupado = df_item.groupby('ID_Modulo').agg({
-            'Pres_Material_Equipos_Bs': 'sum', 'Real_Mat_Eq_Bs': 'sum',
-            'Pres_Mano_Obra_Bs': 'sum', 'Real_Mano_Obra_Bs': 'sum'
-        }).reset_index()
+            # Garantizar cálculo de Gasto Real Total por ítem
+            if 'Gasto_Real_Total_Bs' not in df_item.columns:
+                df_item['Gasto_Real_Total_Bs'] = df_item['Real_Mat_Eq_Bs'].fillna(0) + df_item['Real_Mano_Obra_Bs'].fillna(0)
 
-        mapa_nombres = dict(zip(df_avance['ID_Modulo'], df_avance['Nombre_Modulo']))
-        df_agrupado['Nombre_Modulo'] = df_agrupado['ID_Modulo'].map(mapa_nombres).fillna(df_agrupado['ID_Modulo'])
+            # Mapeo de nombres de módulos
+            mapa_nombres = dict(zip(df_avance['ID_Modulo'], df_avance['Nombre_Modulo']))
+            df_item['Nombre_Modulo'] = df_item['ID_Modulo'].map(mapa_nombres).fillna(df_item['ID_Modulo'])
 
-        with col_mat:
-            st.markdown("**Análisis de Adquisición de Materiales y Equipamiento (Bs.)**")
-            df_mat = df_agrupado.melt(id_vars=['Nombre_Modulo'], value_vars=['Pres_Material_Equipos_Bs', 'Real_Mat_Eq_Bs'],
-                                      var_name='Estado', value_name='Monto (Bs)')
-            df_mat['Estado'] = df_mat['Estado'].map({'Pres_Material_Equipos_Bs': 'Presupuestado', 'Real_Mat_Eq_Bs': 'Ejecutado (Real)'})
+            # Estado de sesión para módulo seleccionado
+            if "modulo_seleccionado" not in st.session_state:
+                st.session_state["modulo_seleccionado"] = df_avance['Nombre_Modulo'].iloc[0] if not df_avance.empty else "Obra Gruesa"
+
+            # Agrupación por Módulo
+            df_mod_summary = df_item.groupby(['ID_Modulo', 'Nombre_Modulo'], as_index=False).agg({
+                'Pres_Material_Equipos_Bs': 'sum',
+                'Real_Mat_Eq_Bs': 'sum',
+                'Pres_Mano_Obra_Bs': 'sum',
+                'Real_Mano_Obra_Bs': 'sum',
+                'Gasto_Real_Total_Bs': 'sum'
+            })
+
+            # Gráfico interactivo por Módulo (Barras horizontales)
+            fig_modulos = px.bar(
+                df_mod_summary,
+                x='Gasto_Real_Total_Bs',
+                y='Nombre_Modulo',
+                orientation='h',
+                title="Desembolso Real por Módulo (Haz clic en una barra para filtrar)",
+                labels={'Gasto_Real_Total_Bs': 'Gasto Real (Bs)', 'Nombre_Modulo': 'Módulo'},
+                color='Gasto_Real_Total_Bs',
+                color_continuous_scale='Oranges',
+                text=df_mod_summary['Gasto_Real_Total_Bs'].apply(lambda x: f"Bs. {x:,.0f}")
+            )
+
+            fig_modulos.update_traces(textposition='outside', cliponaxis=False)
+            fig_modulos.update_layout(
+                clickmode='event+select',
+                xaxis_title="Desembolso Real (Bs)",
+                yaxis_title="",
+                height=300,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                margin=dict(l=20, r=60, t=40, b=20)
+            )
+
+            # Renderizado interactivo con captura de eventos de selección
+            evento_modulo = st.plotly_chart(
+                fig_modulos,
+                use_container_width=True,
+                on_select="rerun",
+                key="grafico_modulos_click"
+            )
+
+            if evento_modulo and "selection" in evento_modulo and evento_modulo["selection"]["point_indices"]:
+                idx_p = evento_modulo["selection"]["point_indices"][0]
+                st.session_state["modulo_seleccionado"] = df_mod_summary.iloc[idx_p]['Nombre_Modulo']
+
+            # Selector manual alternativo
+            modulos_unicos = list(df_mod_summary['Nombre_Modulo'].unique())
+            idx_defecto = modulos_unicos.index(st.session_state["modulo_seleccionado"]) if st.session_state["modulo_seleccionado"] in modulos_unicos else 0
             
-            fig_mat = px.bar(df_mat, x='Nombre_Modulo', y='Monto (Bs)', color='Estado', barmode='group',
-                             color_discrete_sequence=['#64748B', '#FF8C00'], text_auto='.0s')
-            fig_mat.update_layout(plot_bgcolor='rgba(0,0,0,0)', xaxis_title="")
-            st.plotly_chart(fig_mat, use_container_width=True)
+            mod_elegido = st.selectbox(
+                "📍 Módulo Inspeccionado en Detalle:",
+                options=modulos_unicos,
+                index=idx_defecto,
+                key="sb_modulo_inspector"
+            )
+            st.session_state["modulo_seleccionado"] = mod_elegido
 
-        with col_mo:
-            st.markdown("**Análisis de Desembolsos en Mano de Obra y Planillas (Bs.)**")
-            df_mo = df_agrupado.melt(id_vars=['Nombre_Modulo'], value_vars=['Pres_Mano_Obra_Bs', 'Real_Mano_Obra_Bs'],
-                                     var_name='Estado', value_name='Monto (Bs)')
-            df_mo['Estado'] = df_mo['Estado'].map({'Pres_Mano_Obra_Bs': 'Presupuestado', 'Real_Mano_Obra_Bs': 'Ejecutado (Real)'})
-            
-            fig_mo = px.bar(df_mo, x='Nombre_Modulo', y='Monto (Bs)', color='Estado', barmode='group',
-                            color_discrete_sequence=['#64748B', '#00CC96'], text_auto='.0s')
-            fig_mo.update_layout(plot_bgcolor='rgba(0,0,0,0)', xaxis_title="")
-            st.plotly_chart(fig_mo, use_container_width=True)
-    except Exception as e:
-        st.error(f"Falla en Gráfico de Desviaciones: {e}")
+            # --- GRÁFICO DRILL-DOWN POR ÍTEM (ORDENADO DE MAYOR A MENOR GASTO) ---
+            st.markdown(f"#### 📋 Concentración de Gasto Real por Ítem — Módulo: **{st.session_state['modulo_seleccionado']}**")
+
+            col_item_desc = "Descripcion_Item" if "Descripcion_Item" in df_item.columns else "Descripcion" if "Descripcion" in df_item.columns else "ID_Item"
+
+            df_items_filtrados = df_item[
+                df_item['Nombre_Modulo'] == st.session_state["modulo_seleccionado"]
+            ].copy()
+
+            if not df_items_filtrados.empty:
+                # Ordenamiento estricto de mayor a menor desembolso
+                df_items_filtrados = df_items_filtrados.sort_values(by='Gasto_Real_Total_Bs', ascending=True)
+
+                fig_items = px.bar(
+                    df_items_filtrados,
+                    x='Gasto_Real_Total_Bs',
+                    y=col_item_desc,
+                    orientation='h',
+                    title=f"Ítems de Mayor Impacto Económico en {st.session_state['modulo_seleccionado']}",
+                    labels={'Gasto_Real_Total_Bs': 'Gasto Real (Bs)', col_item_desc: 'Ítem de Obra'},
+                    color='Gasto_Real_Total_Bs',
+                    color_continuous_scale='YlOrRd',
+                    text=df_items_filtrados['Gasto_Real_Total_Bs'].apply(lambda x: f"Bs. {x:,.2f}")
+                )
+
+                fig_items.update_traces(
+                    textposition='outside',
+                    cliponaxis=False,
+                    hovertemplate="<b>%{y}</b><br>Gasto Real: Bs. %{x:,.2f}<extra></extra>"
+                )
+
+                fig_items.update_layout(
+                    xaxis_title="Desembolso Real (Bs)",
+                    yaxis_title="",
+                    height=max(350, len(df_items_filtrados) * 40),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    margin=dict(l=20, r=100, t=40, b=20)
+                )
+
+                st.plotly_chart(fig_items, use_container_width=True)
+
+                # Planilla interactiva de respaldo
+                with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
+                    cols_mostrar = [c for c in ['ID_Item', col_item_desc, 'Pres_Material_Equipos_Bs', 'Real_Mat_Eq_Bs', 'Pres_Mano_Obra_Bs', 'Real_Mano_Obra_Bs', 'Gasto_Real_Total_Bs'] if c in df_items_filtrados.columns]
+                    df_tabla = df_items_filtrados[cols_mostrar].sort_values(by='Gasto_Real_Total_Bs', ascending=False)
+                    st.dataframe(df_tabla, use_container_width=True, hide_index=True)
+            else:
+                st.info("No se registraron ítems ejecutados para el módulo seleccionado.")
+
+        except Exception as e:
+            st.error(f"Falla en la generación del gráfico con interacción drill-down: {e}")
 
     st.divider()
 
