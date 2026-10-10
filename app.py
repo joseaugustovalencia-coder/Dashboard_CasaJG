@@ -120,19 +120,30 @@ def leer_csv_robusto(file):
     reset_puntero()
     return pd.read_csv(file, sep=',', encoding='utf-8')
 
+from pathlib import Path
+import pandas as pd
+import streamlit as st
+
+BASE_DIR = Path(__file__).resolve().parent
+
 @st.cache_data
 def cargar_datos_locales():
+    # Nombres exactos de las bases de datos guardadas en la raíz del repositorio
     archivos = {
-        "avance": "PRESUPUESTO OBRA GRUESA E INSTALACIONES_CASA JG_2.xlsx - BD_Avance.csv",
-        "item": "PRESUPUESTO OBRA GRUESA E INSTALACIONES_CASA JG_2.xlsx - BD-Item.csv",
-        "crono": "PRESUPUESTO OBRA GRUESA E INSTALACIONES_CASA JG_2.xlsx - BD_Cronograma.csv"
+        "avance": BASE_DIR / "BD_Avance.csv",
+        "item": BASE_DIR / "BD_Item.csv",
+        "crono": BASE_DIR / "BD_Cronograma.csv"
     }
-    df_dict = {}
-    for key, filename in archivos.items():
-        if os.path.exists(filename):
-            df_dict[key] = leer_csv_robusto(filename)
-        else:
+    
+    # Validar existencia física de los 3 archivos en el servidor remoto
+    for key, filepath in archivos.items():
+        if not filepath.exists():
             return None
+            
+    df_dict = {}
+    for key, filepath in archivos.items():
+        df_dict[key] = leer_csv_robusto(filepath)
+        
     return df_dict["avance"], df_dict["item"], df_dict["crono"]
 
 # Ejecución de la ingesta
