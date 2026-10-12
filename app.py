@@ -322,26 +322,6 @@ with st.sidebar:
         """
         st.markdown(qr_card_html, unsafe_allow_html=True)
 
-    # ==========================================
-    # 5. DYNAMIC QR CODE FOR SHARING
-    # ==========================================
-    st.divider()
-    st.subheader("📲 Compartir con Cliente")
-    url_dashboard = st.text_input(
-        "Enlace de tu App Deplomada:", 
-        value="https://casajg-jumbo-ia.streamlit.app"
-    )
-    if url_dashboard:
-        # Generación de QR dinámico usando un servicio gratuito seguro
-        qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=FF8C00&bgcolor=1E1E1E&data={url_dashboard}"
-        st.markdown(f"""
-            <div style="text-align: center; background-color: #1E1E1E; padding: 12px; border-radius: 8px; border: 1px solid #FF8C00; margin-top: 5px;">
-                <p style="font-size: 11px; color: #FFFFFF; margin-bottom: 8px;"><b>CÓDIGO QR DE ACCESO</b></p>
-                <img src="{qr_api_url}" style="width: 120px; height: 120px; border-radius: 4px; margin-bottom: 8px;">
-                <p style="font-size: 10px; color: #CCCCCC; margin-bottom: 0px; line-height: 1.2;">Escanea con tu celular para compartir la visualización</p>
-            </div>
-        """, unsafe_allow_html=True)
-
 # ==========================================
 # 6. INICIALIZACIÓN DE BASES DE DATOS DE SESIÓN
 # ==========================================
