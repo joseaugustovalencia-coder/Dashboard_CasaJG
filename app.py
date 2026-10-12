@@ -278,7 +278,7 @@ with st.sidebar:
         # Input de URL pública base
         url_input_base = st.text_input(
             "Enlace de tu App Desplegada:",
-            value="https://casajg-jumbo-ia.streamlit.app",
+            value="https://casa-jg.streamlit.app",
             key="url_cliente_input_unificado"
         ).strip().rstrip("/")
 
