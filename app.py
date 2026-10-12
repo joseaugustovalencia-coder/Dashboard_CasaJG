@@ -632,13 +632,13 @@ with tab_control:
                     use_container_width=True,
                     hide_index=True
                 )
-            
+
         else:
             st.info("No se registraron ítems ejecutados para el módulo seleccionado.")
 
     except Exception as e:
         st.error(f"Falla en la generación del gráfico con interacción drill-down: {e}")
-
+        
     st.divider()
 
     # --- SECCIÓN 3: CRONOGRAMA ---
