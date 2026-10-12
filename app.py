@@ -566,7 +566,13 @@ with tab_control:
         # --- GRÁFICO DRILL-DOWN POR ÍTEM ---
         st.markdown(f"#### 📋 Concentración de Gasto Real por Ítem — Módulo: **{st.session_state['modulo_seleccionado']}**")
 
-        col_item_desc = "Descripcion_Item" if "Descripcion_Item" in df_item.columns else "Descripcion" if "Descripcion" in df_item.columns else "ID_Item"
+        # Determinación de columna descriptiva con fallback seguro
+        if "Descripcion_Item" in df_item.columns:
+            col_item_desc = "Descripcion_Item"
+        elif "Descripcion" in df_item.columns:
+            col_item_desc = "Descripcion"
+        else:
+            col_item_desc = "ID_Item"
 
         df_items_filtrados = df_item[
             df_item['Nombre_Modulo'] == st.session_state["modulo_seleccionado"]
@@ -604,8 +610,21 @@ with tab_control:
 
             st.plotly_chart(fig_items, use_container_width=True)
 
+            # Planilla interactiva con deduplicación garantizada de nombres de columna
             with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
-                cols_mostrar = [c for c in ['ID_Item', col_item_desc, 'Pres_Material_Equipos_Bs', 'Real_Mat_Eq_Bs', 'Pres_Mano_Obra_Bs', 'Real_Mano_Obra_Bs', 'Gasto_Real_Total_Bs'] if c in df_items_filtrados.columns]
+                candidatas = [
+                    'ID_Item', 
+                    col_item_desc, 
+                    'Pres_Material_Equipos_Bs', 
+                    'Real_Mat_Eq_Bs', 
+                    'Pres_Mano_Obra_Bs', 
+                    'Real_Mano_Obra_Bs', 
+                    'Gasto_Real_Total_Bs'
+                ]
+                
+                # Preserva el orden eliminando duplicados si col_item_desc == 'ID_Item'
+                cols_mostrar = list(dict.fromkeys([c for c in candidatas if c in df_items_filtrados.columns]))
+                
                 df_tabla = df_items_filtrados[cols_mostrar].sort_values(by='Gasto_Real_Total_Bs', ascending=False)
                 st.dataframe(df_tabla, use_container_width=True, hide_index=True)
         else:
