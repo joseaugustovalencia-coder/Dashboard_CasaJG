@@ -579,15 +579,22 @@ with tab_control:
         ].copy()
 
         if not df_items_filtrados.empty:
+            # 1. Identificación de la columna descriptiva del ítem de obra
+            col_nombre = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else "ID_Item"
+
+            # 2. Asignación de etiqueta descriptiva como texto (Categoría Discreta)
+            df_items_filtrados['Label_Grafico'] = df_items_filtrados[col_nombre].astype(str)
+
+            # 3. Ordenamiento ascendente para gráfico de barras horizontales
             df_items_filtrados = df_items_filtrados.sort_values(by='Gasto_Real_Total_Bs', ascending=True)
 
             fig_items = px.bar(
                 df_items_filtrados,
                 x='Gasto_Real_Total_Bs',
-                y=col_item_desc,
+                y='Label_Grafico',
                 orientation='h',
                 title=f"Ítems de Mayor Impacto Económico en {st.session_state['modulo_seleccionado']}",
-                labels={'Gasto_Real_Total_Bs': 'Gasto Real (Bs)', col_item_desc: 'Ítem de Obra'},
+                labels={'Gasto_Real_Total_Bs': 'Gasto Real (Bs)', 'Label_Grafico': 'Ítem de Obra'},
                 color='Gasto_Real_Total_Bs',
                 color_continuous_scale='YlOrRd',
                 text=df_items_filtrados['Gasto_Real_Total_Bs'].apply(lambda x: f"Bs. {x:,.2f}")
@@ -599,10 +606,13 @@ with tab_control:
                 hovertemplate="<b>%{y}</b><br>Gasto Real: Bs. %{x:,.2f}<extra></extra>"
             )
 
+            # Forzar el eje Y a tipo categoría para renderizar cada nombre de ítem individualmente
+            fig_items.update_yaxes(type='category')
+
             fig_items.update_layout(
                 xaxis_title="Desembolso Real (Bs)",
                 yaxis_title="",
-                height=max(350, len(df_items_filtrados) * 40),
+                height=max(350, len(df_items_filtrados) * 45),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 margin=dict(l=20, r=100, t=40, b=20)
