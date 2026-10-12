@@ -556,7 +556,7 @@ with tab_control:
         idx_defecto = modulos_unicos.index(st.session_state["modulo_seleccionado"]) if st.session_state["modulo_seleccionado"] in modulos_unicos else 0
         
         # --- SELECTOR DE MÓDULO O CONSOLIDADO GLOBAL (TOP 10) ---
-        opcion_top10_global = "TOP 10 Ítems más caros (Toda la Obra)"
+        opcion_top10_global = "TOP 10 Items de mayor costo (Toda la Obra)"
         lista_modulos = [opcion_top10_global] + sorted(list(df_item['Nombre_Modulo'].dropna().unique()))
 
         modulo_seleccionado = st.selectbox(
@@ -574,8 +574,8 @@ with tab_control:
                 ascending=False
             ).head(10).copy()
             
-            titulo_grafico = "TOP 10 Ítems de Mayor Impacto Económico en Toda la Obra"
-            subtitulo_seccion = "#### 📋 Concentración de Gasto Real — **TOP 10 Ítems Globales (Todos los Módulos)**"
+            titulo_grafico = "TOP 10 Items de mayor costo en Toda la Obra"
+            subtitulo_seccion = "#### 📋 Concentración de Gasto Real — **TOP 10 Items de mayor costo (Todos los Módulos)**"
         else:
             df_items_filtrados = df_item[
                 df_item['Nombre_Modulo'] == st.session_state["modulo_seleccionado"]
@@ -589,7 +589,10 @@ with tab_control:
         if not df_items_filtrados.empty:
             col_nombre = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else "ID_Item"
 
-            df_items_filtrados['Label_Grafico'] = df_items_filtrados[col_nombre].astype(str)
+            # Truncado estricto a 25 caracteres para evitar desbordamiento del lienzo en Plotly
+            df_items_filtrados['Label_Grafico'] = df_items_filtrados[col_nombre].astype(str).apply(
+                lambda x: x[:25] + "..." if len(x) > 25 else x
+            )
             df_items_filtrados = df_items_filtrados.sort_values(by='Gasto_Real_Total_Bs', ascending=False)
 
             fig_items = px.bar(
