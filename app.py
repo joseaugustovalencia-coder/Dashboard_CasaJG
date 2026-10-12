@@ -612,21 +612,27 @@ with tab_control:
 
             # Planilla interactiva con deduplicación garantizada de nombres de columna
             with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
-                candidatas = [
-                    'ID_Item', 
-                    col_item_desc, 
-                    'Pres_Material_Equipos_Bs', 
-                    'Real_Mat_Eq_Bs', 
-                    'Pres_Mano_Obra_Bs', 
-                    'Real_Mano_Obra_Bs', 
-                    'Gasto_Real_Total_Bs'
-                ]
-                
-                # Preserva el orden eliminando duplicados si col_item_desc == 'ID_Item'
-                cols_mostrar = list(dict.fromkeys([c for c in candidatas if c in df_items_filtrados.columns]))
-                
-                df_tabla = df_items_filtrados[cols_mostrar].sort_values(by='Gasto_Real_Total_Bs', ascending=False)
-                st.dataframe(df_tabla, use_container_width=True, hide_index=True)
+           # 1. Identificación de la columna descriptiva del ítem
+            col_nombre_item = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else col_item_desc
+
+            # 2. Selección estricta de las 3 columnas requeridas
+            df_planilla = df_items_filtrados[['ID_Item', col_nombre_item, 'Gasto_Real_Total_Bs']].copy()
+
+            # 3. Ordenamiento descendente (de mayor a menor desembolso)
+            df_planilla = df_planilla.sort_values(by='Gasto_Real_Total_Bs', ascending=False)
+
+            # 4. Formateo numérico: entero, separador de miles `,` y sin decimales
+            df_planilla['Gasto_Real_Total_Bs'] = df_planilla['Gasto_Real_Total_Bs'].apply(lambda x: f"{round(x):,}")
+
+            # 5. Renombrado ejecutivo de cabeceras
+            df_planilla.columns = ['Id Item', 'Nombre del Ítem', 'Gasto Real (Bs)']
+
+            # 6. Renderizado de la tabla simplificada
+            st.dataframe(
+                df_planilla,
+                use_container_width=True,
+                hide_index=True
+            )
         else:
             st.info("No se registraron ítems ejecutados para el módulo seleccionado.")
 
