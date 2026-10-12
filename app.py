@@ -8,9 +8,10 @@ import os
 import re
 import base64
 import io
+import qrcode
 
 # ==========================================
-# 1. CONFIGURACIÓN DEL ENTORNO (UI/UX)
+# 1. CONFIGURACIÓN DEL ENTORNO Y MODO CLIENTE
 # ==========================================
 st.set_page_config(
     page_title="CONTROL DE OBRAS - JUMBO IA",
@@ -18,6 +19,23 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Detección de parámetro de consulta HTTP GET para acceso de cliente
+query_params = st.query_params
+es_modo_cliente = query_params.get("modo") == "cliente"
+
+if es_modo_cliente:
+    # Inyección de estilos CSS para colapsar y ocultar el sidebar por completo
+    st.markdown(
+        """
+        <style>
+            [data-testid="stSidebar"] {display: none !important;}
+            [data-testid="collapsedControl"] {display: none !important;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.info("📋 **Panel Ejecutivo de Seguimiento de Obra — Vista Exclusiva de Cliente**")
 
 # Estilos CSS inyectados para forzar el modo premium y tarjetas (Cards) compactas
 st.markdown("""
@@ -251,6 +269,44 @@ with st.sidebar:
             
     st.divider()
     st.info(f"**Proyecto:** CASA JG\n\n**Ubicación:** Santa Cruz, Bolivia\n\n**Fecha Corte:** {fecha_corte_obj.strftime('%d/%m/%Y')}")
+
+    # --- MÓDULO GENERADOR DE CÓDIGO QR Y ENLACE DE CLIENTE ---
+    if not es_modo_cliente:
+        st.divider()
+        st.subheader("📲 Compartir con Cliente")
+
+        # Control interactivo para validar la URL pública
+        url_input_base = st.text_input(
+            "URL Base de la App Desplegada:",
+            value="https://casajg-jumbo-ia.streamlit.app",
+            help="Copie la URL pública exacta de la barra de direcciones de su navegador."
+        ).strip().rstrip("/")
+
+        # Concatenación del parámetro de consulta para la vista limpia de cliente
+        url_cliente_completa = f"{url_input_base}/?modo=cliente"
+
+        # Generación del código QR binario en memoria
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=8,
+            border=2,
+        )
+        qr.add_data(url_cliente_completa)
+        qr.make(fit=True)
+        img_qr = qr.make_image(fill_color="#1E1E1E", back_color="#FFFFFF")
+
+        buffer_qr = io.BytesIO()
+        img_qr.save(buffer_qr, format="PNG")
+        bytes_qr = buffer_qr.getvalue()
+
+        # Renderizado de componentes en el Sidebar
+        st.code(url_cliente_completa, language="text")
+        st.image(
+            bytes_qr,
+            caption="Escanee para abrir la vista de cliente sin controles de simulación",
+            use_container_width=True,
+        )
 
     # ==========================================
     # 5. DYNAMIC QR CODE FOR SHARING
