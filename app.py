@@ -555,45 +555,49 @@ with tab_control:
         modulos_unicos = list(df_mod_summary['Nombre_Modulo'].unique())
         idx_defecto = modulos_unicos.index(st.session_state["modulo_seleccionado"]) if st.session_state["modulo_seleccionado"] in modulos_unicos else 0
         
-        mod_elegido = st.selectbox(
+        # --- SELECTOR DE MÓDULO O CONSOLIDADO GLOBAL (TOP 10) ---
+        opcion_top10_global = "TOP 10 Ítems más caros (Toda la Obra)"
+        lista_modulos = [opcion_top10_global] + sorted(list(df_item['Nombre_Modulo'].dropna().unique()))
+
+        modulo_seleccionado = st.selectbox(
             "📍 Módulo Inspeccionado en Detalle:",
-            options=modulos_unicos,
-            index=idx_defecto,
+            options=lista_modulos,
+            index=0,
             key="sb_modulo_inspector"
         )
-        st.session_state["modulo_seleccionado"] = mod_elegido
+        st.session_state['modulo_seleccionado'] = modulo_seleccionado
 
-        # --- GRÁFICO DRILL-DOWN POR ÍTEM ---
-        st.markdown(f"#### 📋 Concentración de Gasto Real por Ítem — Módulo: **{st.session_state['modulo_seleccionado']}**")
-
-        # Determinación de columna descriptiva con fallback seguro
-        if "Descripcion_Item" in df_item.columns:
-            col_item_desc = "Descripcion_Item"
-        elif "Descripcion" in df_item.columns:
-            col_item_desc = "Descripcion"
+        # --- LÓGICA DE FILTRADO Y CONCENTRACIÓN DE GASTOS ---
+        if st.session_state['modulo_seleccionado'] == opcion_top10_global:
+            df_items_filtrados = df_item.sort_values(
+                by='Gasto_Real_Total_Bs', 
+                ascending=False
+            ).head(10).copy()
+            
+            titulo_grafico = "TOP 10 Ítems de Mayor Impacto Económico en Toda la Obra"
+            subtitulo_seccion = "#### 📋 Concentración de Gasto Real — **TOP 10 Ítems Globales (Todos los Módulos)**"
         else:
-            col_item_desc = "ID_Item"
+            df_items_filtrados = df_item[
+                df_item['Nombre_Modulo'] == st.session_state["modulo_seleccionado"]
+            ].copy()
+            
+            titulo_grafico = f"Ítems de Mayor Impacto Económico en {st.session_state['modulo_seleccionado']}"
+            subtitulo_seccion = f"#### 📋 Concentración de Gasto Real por Ítem — Módulo: **{st.session_state['modulo_seleccionado']}**"
 
-        df_items_filtrados = df_item[
-            df_item['Nombre_Modulo'] == st.session_state["modulo_seleccionado"]
-        ].copy()
+        st.markdown(subtitulo_seccion)
 
         if not df_items_filtrados.empty:
-            # 1. Identificación de la columna descriptiva del ítem de obra
             col_nombre = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else "ID_Item"
 
-            # 2. Asignación de etiqueta descriptiva como texto (Categoría Discreta)
             df_items_filtrados['Label_Grafico'] = df_items_filtrados[col_nombre].astype(str)
-
-            # 3. Ordenamiento ascendente para gráfico de barras horizontales
-            df_items_filtrados = df_items_filtrados.sort_values(by='Gasto_Real_Total_Bs', ascending=True)
+            df_items_filtrados = df_items_filtrados.sort_values(by='Gasto_Real_Total_Bs', ascending=False)
 
             fig_items = px.bar(
                 df_items_filtrados,
                 x='Gasto_Real_Total_Bs',
                 y='Label_Grafico',
                 orientation='h',
-                title=f"Ítems de Mayor Impacto Económico en {st.session_state['modulo_seleccionado']}",
+                title=titulo_grafico,
                 labels={'Gasto_Real_Total_Bs': 'Gasto Real (Bs)', 'Label_Grafico': 'Ítem de Obra'},
                 color='Gasto_Real_Total_Bs',
                 color_continuous_scale='YlOrRd',
@@ -606,13 +610,12 @@ with tab_control:
                 hovertemplate="<b>%{y}</b><br>Gasto Real: Bs. %{x:,.2f}<extra></extra>"
             )
 
-            # Forzar el eje Y a tipo categoría para renderizar cada nombre de ítem individualmente
-            fig_items.update_yaxes(type='category')
+            fig_items.update_yaxes(type='category', autorange="reversed")
 
             fig_items.update_layout(
                 xaxis_title="Desembolso Real (Bs)",
                 yaxis_title="",
-                height=max(350, len(df_items_filtrados) * 45),
+                height=max(380, len(df_items_filtrados) * 45),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 margin=dict(l=20, r=100, t=40, b=20)
@@ -621,30 +624,18 @@ with tab_control:
             st.plotly_chart(fig_items, use_container_width=True)
 
             with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
-                # 1. Identificación de la columna descriptiva del ítem
-                col_nombre_item = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else col_item_desc
-
-                # 2. Selección estricta de las 3 columnas requeridas
-                df_planilla = df_items_filtrados[['ID_Item', col_nombre_item, 'Gasto_Real_Total_Bs']].copy()
-
-                # 3. Ordenamiento descendente (de mayor a menor desembolso)
+                df_planilla = df_items_filtrados[['ID_Item', col_nombre, 'Gasto_Real_Total_Bs']].copy()
                 df_planilla = df_planilla.sort_values(by='Gasto_Real_Total_Bs', ascending=False)
-
-                # 4. Formateo numérico: entero, separador de miles `,` y sin decimales
                 df_planilla['Gasto_Real_Total_Bs'] = df_planilla['Gasto_Real_Total_Bs'].apply(lambda x: f"{round(x):,}")
-
-                # 5. Renombrado ejecutivo de cabeceras
                 df_planilla.columns = ['Id Item', 'Nombre del Ítem', 'Gasto Real (Bs)']
 
-                # 6. Renderizado de la tabla simplificada
                 st.dataframe(
                     df_planilla,
                     use_container_width=True,
                     hide_index=True
                 )
-
         else:
-            st.info("No se registraron ítems ejecutados para el módulo seleccionado.")
+            st.info("No se registraron ítems ejecutados para la selección actual.")
 
     except Exception as e:
         st.error(f"Falla en la generación del gráfico con interacción drill-down: {e}")
