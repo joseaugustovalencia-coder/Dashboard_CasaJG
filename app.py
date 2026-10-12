@@ -270,22 +270,22 @@ with st.sidebar:
     st.divider()
     st.info(f"**Proyecto:** CASA JG\n\n**Ubicación:** Santa Cruz, Bolivia\n\n**Fecha Corte:** {fecha_corte_obj.strftime('%d/%m/%Y')}")
 
-    # --- MÓDULO GENERADOR DE CÓDIGO QR Y ENLACE DE CLIENTE ---
+    # --- MÓDULO ÚNICO: GENERADOR DE QR ESTILIZADO (VISTA CLIENTE) ---
     if not es_modo_cliente:
         st.divider()
         st.subheader("📲 Compartir con Cliente")
 
-        # Control interactivo para validar la URL pública
+        # Input de URL pública base
         url_input_base = st.text_input(
-            "URL Base de la App Desplegada:",
+            "Enlace de tu App Desplegada:",
             value="https://casajg-jumbo-ia.streamlit.app",
-            help="Copie la URL pública exacta de la barra de direcciones de su navegador."
+            key="url_cliente_input_unificado"
         ).strip().rstrip("/")
 
-        # Concatenación del parámetro de consulta para la vista limpia de cliente
+        # Concatenación obligatoria del parámetro de consulta para cliente
         url_cliente_completa = f"{url_input_base}/?modo=cliente"
 
-        # Generación del código QR binario en memoria
+        # Generación del código QR en alto contraste (Naranja #FF8C00 sobre Fondo #1E1E1E)
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -294,19 +294,33 @@ with st.sidebar:
         )
         qr.add_data(url_cliente_completa)
         qr.make(fit=True)
-        img_qr = qr.make_image(fill_color="#1E1E1E", back_color="#FFFFFF")
+        img_qr = qr.make_image(fill_color="#FF8C00", back_color="#1E1E1E")
 
+        # Conversión a buffer binario y codificación Base64
         buffer_qr = io.BytesIO()
         img_qr.save(buffer_qr, format="PNG")
-        bytes_qr = buffer_qr.getvalue()
+        encoded_qr = base64.b64encode(buffer_qr.getvalue()).decode("utf-8")
 
-        # Renderizado de componentes en el Sidebar
-        st.code(url_cliente_completa, language="text")
-        st.image(
-            bytes_qr,
-            caption="Escanee para abrir la vista de cliente sin controles de simulación",
-            use_container_width=True,
-        )
+        # Renderizado en tarjeta encapsulada con borde naranja
+        qr_card_html = f"""
+        <div style="
+            border: 1.5px solid #FF8C00;
+            border-radius: 8px;
+            padding: 12px;
+            background-color: #121212;
+            text-align: center;
+            margin-top: 10px;
+        ">
+            <p style="color: #FFFFFF; font-weight: bold; font-size: 12px; margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase;">
+                CÓDIGO QR DE ACCESO
+            </p>
+            <img src="data:image/png;base64,{encoded_qr}" style="width: 100%; max-width: 220px; border-radius: 4px;" />
+            <p style="color: #B0B0B0; font-size: 11px; margin-top: 8px; margin-bottom: 0px;">
+                Escanee con tu celular para compartir la visualización
+            </p>
+        </div>
+        """
+        st.markdown(qr_card_html, unsafe_allow_html=True)
 
     # ==========================================
     # 5. DYNAMIC QR CODE FOR SHARING
