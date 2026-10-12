@@ -610,7 +610,7 @@ with tab_control:
 
             st.plotly_chart(fig_items, use_container_width=True)
 
-           with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
+            with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
                 # 1. Identificación de la columna descriptiva del ítem
                 col_nombre_item = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else col_item_desc
 
