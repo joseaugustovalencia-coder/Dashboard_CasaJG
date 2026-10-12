@@ -610,29 +610,29 @@ with tab_control:
 
             st.plotly_chart(fig_items, use_container_width=True)
 
-            # Planilla interactiva con deduplicación garantizada de nombres de columna
-            with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
-           # 1. Identificación de la columna descriptiva del ítem
-            col_nombre_item = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else col_item_desc
+           with st.expander("🔍 Ver Planilla Detallada de Costos Directos"):
+                # 1. Identificación de la columna descriptiva del ítem
+                col_nombre_item = "Descripcion_Item" if "Descripcion_Item" in df_items_filtrados.columns else "Descripcion" if "Descripcion" in df_items_filtrados.columns else "Nombre_Item" if "Nombre_Item" in df_items_filtrados.columns else col_item_desc
 
-            # 2. Selección estricta de las 3 columnas requeridas
-            df_planilla = df_items_filtrados[['ID_Item', col_nombre_item, 'Gasto_Real_Total_Bs']].copy()
+                # 2. Selección estricta de las 3 columnas requeridas
+                df_planilla = df_items_filtrados[['ID_Item', col_nombre_item, 'Gasto_Real_Total_Bs']].copy()
 
-            # 3. Ordenamiento descendente (de mayor a menor desembolso)
-            df_planilla = df_planilla.sort_values(by='Gasto_Real_Total_Bs', ascending=False)
+                # 3. Ordenamiento descendente (de mayor a menor desembolso)
+                df_planilla = df_planilla.sort_values(by='Gasto_Real_Total_Bs', ascending=False)
 
-            # 4. Formateo numérico: entero, separador de miles `,` y sin decimales
-            df_planilla['Gasto_Real_Total_Bs'] = df_planilla['Gasto_Real_Total_Bs'].apply(lambda x: f"{round(x):,}")
+                # 4. Formateo numérico: entero, separador de miles `,` y sin decimales
+                df_planilla['Gasto_Real_Total_Bs'] = df_planilla['Gasto_Real_Total_Bs'].apply(lambda x: f"{round(x):,}")
 
-            # 5. Renombrado ejecutivo de cabeceras
-            df_planilla.columns = ['Id Item', 'Nombre del Ítem', 'Gasto Real (Bs)']
+                # 5. Renombrado ejecutivo de cabeceras
+                df_planilla.columns = ['Id Item', 'Nombre del Ítem', 'Gasto Real (Bs)']
 
-            # 6. Renderizado de la tabla simplificada
-            st.dataframe(
-                df_planilla,
-                use_container_width=True,
-                hide_index=True
-            )
+                # 6. Renderizado de la tabla simplificada
+                st.dataframe(
+                    df_planilla,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            
         else:
             st.info("No se registraron ítems ejecutados para el módulo seleccionado.")
 
