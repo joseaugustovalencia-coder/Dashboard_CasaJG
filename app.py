@@ -352,6 +352,18 @@ col_summary_chart, col_summary_kpis = st.columns([1, 1])
 
 with col_summary_chart:
     try:
+        # Cómputo ponderado de avance físico global para evitar NameError
+        if 'df_avance' in locals() and not df_avance.empty:
+            if 'Presupuesto_Base_Bs' in df_avance.columns and df_avance['Presupuesto_Base_Bs'].sum() > 0:
+                avance_fisico_global = (
+                    (df_avance['Pct_Avance_Fisico'] * df_avance['Presupuesto_Base_Bs']).sum() 
+                    / df_avance['Presupuesto_Base_Bs'].sum()
+                ) * 100
+            else:
+                avance_fisico_global = df_avance['Pct_Avance_Fisico'].mean()
+        else:
+            avance_fisico_global = 0.0  # Control por omisión
+
         # Cálculo de avance real versus pendiente monetariamente
         valor_ejecutado_bs = costo_total_obra_bs * (avance_fisico_global / 100)
         valor_pendiente_bs = costo_total_obra_bs - valor_ejecutado_bs
